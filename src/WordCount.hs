@@ -1,44 +1,41 @@
-module WordCount (foldWith, foldCountElements, printSelecttedOutput, WCOutputs(..)) where
+module WordCount (foldWith, foldCountElements, printSelecttedOutput) where
 
 import Streamly.Data.Fold (Fold)
-import Data.Bits
 import qualified Streamly.Data.Stream as Stream
-import Data.Word (Word8)
 import qualified Streamly.Data.Fold as Fold
 import qualified Streamly.FileSystem.File as File
 import Data.Function ((&))
+import Data.Char (ord)
+import qualified Streamly.Unicode.Stream as Stream
 
-foldWith :: Fold IO Word8 a -> String -> IO a
-foldWith f file =
-  File.read file
-  & Stream.fold f
+isSpace :: Char -> Bool
+isSpace c = uc == 0x20 || uc - 0x9 <= 4
+  where uc = fromIntegral (ord c) :: Word
 
 data WCOutputs =
     WCOutputs {
-             bytesCount :: !Int
-           , charCount :: !Int
+             charCount :: !Int
+           , wordsCount :: !Int
            , lineCount :: !Int
+           , isSpaceChar :: !Bool
            }
     deriving (Show)
 
-instance Semigroup WCOutputs where
-  (WCOutputs a b c) <> (WCOutputs a' b' c') = WCOutputs (a + a') (b + b') (c + c')
+count :: WCOutputs -> Char -> WCOutputs
+count (WCOutputs charsAmount wordsAmount linesAmount wasSpace) char =
+    let newLinesAmount = if char == '\n' then linesAmount + 1 else linesAmount
+        (newWordsAmount, isSpaceChar) = if isSpace char then (wordsAmount, True)
+            else (if wasSpace then wordsAmount + 1 else wordsAmount, False)
+    in WCOutputs (charsAmount + 1) newWordsAmount newLinesAmount isSpaceChar
 
-instance Monoid WCOutputs where
-  mempty = WCOutputs 0 0 0
-
-countElements :: Word8 -> WCOutputs
-countElements c  =
-     WCOutputs {
-                 bytesCount = 1
-               , charCount = if isContinuationByte then 0 else 1
-               , lineCount = if c == 10 then 1 else 0
-               }
-      where
-        isContinuationByte = (c .&. 0xC0) == 0x80
-
-foldCountElements :: Fold IO Word8 WCOutputs
-foldCountElements = Fold.foldl' (\a b -> a <> countElements b) mempty
+foldWith :: Fold IO Char a -> String -> IO a
+foldWith f file =
+      File.read file
+    & Stream.decodeUtf8
+    & Stream.fold f
+    
+foldCountElements :: Fold IO Char WCOutputs
+foldCountElements = Fold.foldl' count (WCOutputs 0 0 0 True)
 
 printSelecttedOutput :: WCOutputs -> String
-printSelecttedOutput output = show (lineCount output) ++ " " ++ show (charCount output) ++ " " ++ show (bytesCount output)
+printSelecttedOutput output = show (lineCount output) ++ " " ++ show (wordsCount output) ++ " " ++ show (charCount output)
