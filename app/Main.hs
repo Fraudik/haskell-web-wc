@@ -14,7 +14,7 @@ import Network.Wai.Handler.Warp
 import Servant
 import Servant.Multipart
 
-import WordCount (foldWith, foldCountElements, printSelecttedOutput)
+import WordCount (countElements, printSelecttedOutput)
 
 type API = MultipartForm Tmp (MultipartData Tmp) :> Post '[JSON] String
 
@@ -28,8 +28,8 @@ upload :: Server API
 upload multipartData = do
   case files multipartData of
     (file:_) -> do
-      wcStats <- liftIO $ foldWith foldCountElements $ fdPayload file
-      return $ printSelecttedOutput wcStats
+      output <- liftIO $ countElements $ fdPayload file
+      return $ printSelecttedOutput output
     [] -> throwError noFileError
 
 startServer :: IO ()

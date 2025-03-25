@@ -11,8 +11,10 @@
 [x] Первая версия, Proof of Concept. Просто работа с MultipartForm запросами, реализация wc из домашнего задания, тестирование через отправку этого README.
 [x] Подготовлен тестовый файл: sample.txt в 1,12 ГБ. Статистики первого wc для него: 25018508 194885810 1209339403 (строки, слова, символы)
 [x] Реализован подсчет слов, проверена корректность
+[x] Реализована параллельная обработка (интерфейс обращения к WordCount пришлось немного поменять для удобства)
 
 ## Анализ производительности
 
 1. Proof of Concept: Elapsed (wall clock) time (h:mm:ss or m:ss): 0:27.25, Maximum resident set size (kbytes): 1816
 2. Подсчет слов: Elapsed (wall clock) time (h:mm:ss or m:ss): 0:39.20, Maximum resident set size (kbytes): 1816
+3. С параллельной обработкой и 16 Haskell потоками: Elapsed (wall clock) time (h:mm:ss or m:ss): 0:13.07, Maximum resident set size (kbytes): 1820
