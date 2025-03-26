@@ -64,3 +64,12 @@ packages:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+extra-deps:
+- git: https://github.com/composewell/streamly
+  commit: 4b443acde44d3f7eb43f27a40d4e6f6c6dd1b79f
+- git: https://github.com/composewell/streamly
+  commit: 4b443acde44d3f7eb43f27a40d4e6f6c6dd1b79f
+  subdirs:
+    - core
+- git: https://github.com/composewell/streamly-fsevents
+  commit: 87f1c5043695c004a6dae7e46ef45e88bb3fb55b
