@@ -1,23 +1,17 @@
-module WordCount (countElements, printSelecttedOutput) where
+module WordCount (countElementsInFile, countElementsInString, printSelecttedOutput, WCOutputs(..)) where
 
 import Streamly.Data.Fold (Fold)
 import qualified Streamly.Data.Stream as Stream
 import qualified Streamly.Data.Fold as Fold
 import qualified Streamly.FileSystem.File as File
 import Data.Function ((&))
-import Data.Char (ord)
+import Data.Char ( ord, chr, isSpace )
 import Data.Word (Word8)
 import qualified Streamly.Unicode.Stream as Stream
 import Streamly.Data.Array (Array)
 import qualified Streamly.Data.Stream.Prelude as Stream
 import GHC.Conc (numCapabilities)
 import qualified Streamly.Data.Array as Array
-import Data.Char (chr)
-
-isSpace :: Char -> Bool
-isSpace c = uc == 32 || uc - 0x9 <= 4 || uc == 0xa0
-  where
-    uc = fromIntegral (ord c) :: Word
 
 data WCOutputs =
     WCOutputs {
@@ -44,7 +38,7 @@ processChunk chunk = do
             return (isSpace (chr (fromIntegral x)), output)
         Nothing -> return (False, WCOutputs 0 0 0 True)
     where
-      countChunkElements chunk' = 
+      countChunkElements chunk' =
               Array.read chunk'
             & Stream.decodeUtf8
             & Stream.fold (Fold.foldl' processChar (WCOutputs 0 0 0 True))
@@ -60,11 +54,29 @@ combineChunkOutputs (fstBeginsWithSpace, WCOutputs fstLines fstWords fstChars fs
 foldChunks :: Fold IO (Bool, WCOutputs) (Bool, WCOutputs)
 foldChunks = Fold.foldl' combineChunkOutputs (False, WCOutputs 0 0 0 True)
 
-countElements :: String -> IO (Bool, WCOutputs)
-countElements file = do
+countElementsInFile :: String -> IO (Bool, WCOutputs)
+countElementsInFile file = do
       File.readChunks file
     & Stream.parMapM (Stream.maxThreads numCapabilities . Stream.ordered True) processChunk
     & Stream.fold foldChunks
 
+stringToChunks :: Int -> String -> [Array Word8]
+stringToChunks chunkSize str =
+    map Array.fromList $ chunksOf chunkSize (map charToWord8 str)
+  where
+    charToWord8 :: Char -> Word8
+    charToWord8 = fromIntegral . ord
+
+    chunksOf :: Int -> [a] -> [[a]]
+    chunksOf n = takeWhile (not . null) . map (take n) . iterate (drop n)
+
+countElementsInString :: String -> IO (Bool, WCOutputs)
+countElementsInString str =
+      Stream.fromList (stringToChunks numCapabilities str)
+    & Stream.parMapM (Stream.maxThreads numCapabilities . Stream.ordered True) processChunk
+    & Stream.fold foldChunks
+
 printSelecttedOutput :: (Bool, WCOutputs) -> String
-printSelecttedOutput output = show (lineCount . snd $ output) ++ " " ++ show (wordsCount . snd $ output) ++ " " ++ show (charCount . snd $ output)
+printSelecttedOutput output = "Lines count: " ++
+ show (lineCount . snd $ output) ++ "\nWords count: " ++ 
+ show (wordsCount . snd $ output) ++ "\nChars count: " ++ show (charCount . snd $ output)
